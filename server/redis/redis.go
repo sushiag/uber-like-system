@@ -20,6 +20,6 @@ func new(addr, pass string) *Client {
 }
 
 func (r *Client) SetDriverLocation(ctx context.Context, driveID uint64, lat, long float64) error {
-	key := fmt.Sprintf(driverID)
+	key := fmt.Sprintf("", driverID)
 	return r.C.HSet(ctx, key, map[string]interface{}{"lat": lat, "long": long}).Err()
 }
