@@ -10,7 +10,7 @@ type Rider struct {
 // user that accepts rides
 type Driver struct {
 	ID             uint64       `json:"id"`
-	Status         DriverStatus `json:"status"` // assigned, accepted, and completed
+	Status         DriverStatus `json:"status"`
 	DriverLocation Location     `json:"driver_location"`
 }
 
