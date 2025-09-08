@@ -1,54 +1,23 @@
 package main
 
-// user that requests the rides
-type Rider struct {
-	ID            uint64   `json:"id"`
-	Request       *Request `json:"request,omitempty"`
-	RiderLocation Location `json:"rider_location"`
-}
-
-// user that accepts rides
-type Driver struct {
-	ID             uint64       `json:"id"`
-	Status         DriverStatus `json:"status"`
-	DriverLocation Location     `json:"driver_location"`
-}
-
-// this is geo coordinates
-type Location struct {
-	Latitude  float64 `json:"lat"`
-	Longitude float64 `json:"long"`
-}
-
-type RiderStatus uint8
-
-const (
-	RideRequested RiderStatus = iota
-	AssignedRider
-	AcceptedRider
-	CompletedRider
+import (
+	"log"
+	"net/http"
+	"os"
+	api "uber-like-system/cmd"
 )
 
-type DriverStatus uint8
+func main() {
+	dbURL := os.Getenv("DB_URL")
+	redisAddr := os.Getenv("REDIS_ADDR")
 
-const (
-	DriverAvailable DriverStatus = iota
-	AssignedDriver
-	DriverRoute
-	DriverCompleted
-)
+	redisCli := redis.New(redisAddr, "")
+	hub := ws.Newhub()
+	srvr := &api.Server{}
 
-type Request struct {
-	ID       uint64      `json:"id"`
-	RiderID  uint64      `json:"rider_id"`
-	DriverID uint64      `json:"driver_id"`
-	Status   RiderStatus `json:"status"`
-	PickUp   Location    `json:"pickup"`
-	DropOff  Location    `json:"dropoff"`
-}
+	route := chi.NewRouter()
+	srvr.RegisterRoute(r)
 
-type TrackDriver struct {
-	DriverID        uint64     `json:"driver_id"`
-	Path            []Location `json:"path"`
-	CurrentLocation Location   `json:"current_location"`
+	log.Println("listening on")
+	http.ListenAndServe(":8080", r)
 }
