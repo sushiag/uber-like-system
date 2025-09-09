@@ -1,8 +1,10 @@
 version: "2"
-packages:
-  - name: "db"
-    path: "internal/db"
-    queries: "sql/queries/"
-    schema: "sql/schema.sql"
+sql:
+  - schema: "database/"
+    queries: "database/"
     engine: "postgresql"
-    emit_json_tags: true
+    gen:
+      go:
+        package: "db"
+        out: "database"
+        emit_json_tags: true

@@ -1,29 +1,33 @@
 -- riders
-CREATE TABLES IF NOT EXISTS riders (
+CREATE TABLE IF NOT EXISTS riders (
     id BIGSERIAL PRIMARY KEY,
-    username TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() 
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    api_key TEXT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- drivers
-CREATE TABLE IF NOT EXIST drivers {
+CREATE TABLE IF NOT EXISTS drivers (
     id BIGSERIAL PRIMARY KEY,
-    name TEXT,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    api_key TEXT NULL UNIQUE,
     status SMALLINT DEFAULT 0, -- 0= available, 1=assigned, 2=enroute, 3=completed
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-};
+);
 
--- ride_requests
-CREATE TABLE IF NOT EXISTS ride_requests (
+-- rides
+CREATE TABLE IF NOT EXISTS rides (
     id BIGSERIAL PRIMARY KEY,
-    rider_id BIGINT NOT NULL REFERENCES rider(id),
-    driver_id BIGINT REFERENCES driver(id),
+    rider_id BIGINT NOT NULL REFERENCES riders(id),
+    driver_id BIGINT REFERENCES drivers(id),
     status SMALLINT DEFAULT 0, -- 0=requested, 1=assigned, 2=accepted, 3=completed
     pickup_lat DOUBLE PRECISION NOT NULL,  
     pickup_long DOUBLE PRECISION NOT NULL,
     dropoff_lat DOUBLE PRECISION NOT NULL,
     dropoff_long DOUBLE PRECISION NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- driver_location_path
@@ -32,5 +36,5 @@ CREATE TABLE IF NOT EXISTS driver_location_path (
     driver_id BIGINT NOT NULL REFERENCES driver(id),
     lat DOUBLE PRECISION,
     long DOUBLE PRECISION,
-    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );

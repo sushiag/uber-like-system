@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"uber-like-system/redis"
+	database "server/database"
+	redis "server/redis"
+
+	"github.com/go-chi/chi"
 )
 
 type Server struct {
-	DB    *db.Queries
+	DB    *database.Queries
 	Redis *redis.Client
 	WSHub *ws.Hub
 }
@@ -16,7 +19,7 @@ type Server struct {
 func (s *Server) RegisterRoute(r chi.Router) {
 	r.Post("/riders/register", s.createRiders)
 	r.Post("/drivers/register", s.createDriver)
-	r.Post("/rides/request", s.createDriver)
+	// r.Post("/rides/request", s.createDriverRequest)
 	r.Post("/drivers/{id}/location", s.updateDriverLocation)
 	r.Get("/rides/{id}/status", s.getRideStatus)
 }
@@ -24,9 +27,14 @@ func (s *Server) RegisterRoute(r chi.Router) {
 func (s *Server) createRiders(w http.ResponseWriter, r *http.Request) {
 	type req struct {
 		Username string `json:"username"`
+		Password string `json:"password"`
 	}
+
 	var body req
-	json.NewDecoder(r.Body).Decode(&body)
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid input", http.StatusBadRequest)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 }
