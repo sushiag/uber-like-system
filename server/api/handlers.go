@@ -90,7 +90,7 @@ func (s *Server) createDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[Drider Registration] Received request to create an account!")
+	log.Printf("[Driver Registration] Received request to create an account!")
 
 	// Username
 	if err := UsernameField(body.Username); err != nil {
@@ -115,7 +115,7 @@ func (s *Server) createDriver(w http.ResponseWriter, r *http.Request) {
 		Password: string(hashedPassword),
 	})
 	if err != nil {
-		http.Error(w, "failed to insert rider to database", http.StatusInternalServerError)
+		http.Error(w, "failed to insert driver to database", http.StatusInternalServerError)
 		return
 	}
 	log.Printf("[Driver Registration] Successfully registered rider %s", body.Username)
