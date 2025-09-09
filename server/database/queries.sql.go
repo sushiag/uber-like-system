@@ -11,21 +11,26 @@ import (
 )
 
 const createDriver = `-- name: CreateDriver :one
-INSERT INTO drivers(username) VALUES ($1)
-RETURNING id, username, password, api_key, status, created_at
+INSERT INTO drivers(username, password) 
+VALUES ($1, $2)
+RETURNING id, username, created_at
 `
 
-func (q *Queries) CreateDriver(ctx context.Context, username string) (Driver, error) {
-	row := q.db.QueryRowContext(ctx, createDriver, username)
-	var i Driver
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Password,
-		&i.ApiKey,
-		&i.Status,
-		&i.CreatedAt,
-	)
+type CreateDriverParams struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type CreateDriverRow struct {
+	ID        int64        `json:"id"`
+	Username  string       `json:"username"`
+	CreatedAt sql.NullTime `json:"created_at"`
+}
+
+func (q *Queries) CreateDriver(ctx context.Context, arg CreateDriverParams) (CreateDriverRow, error) {
+	row := q.db.QueryRowContext(ctx, createDriver, arg.Username, arg.Password)
+	var i CreateDriverRow
+	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
 	return i, err
 }
 
@@ -69,20 +74,26 @@ func (q *Queries) CreateRide(ctx context.Context, arg CreateRideParams) (Ride, e
 }
 
 const createRider = `-- name: CreateRider :one
-INSERT INTO riders(username) VALUES ($1)
-RETURNING id, username, password, api_key, created_at
+INSERT INTO riders(username, password) 
+VALUES ($1, $2)
+RETURNING id, username, created_at
 `
 
-func (q *Queries) CreateRider(ctx context.Context, username string) (Rider, error) {
-	row := q.db.QueryRowContext(ctx, createRider, username)
-	var i Rider
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Password,
-		&i.ApiKey,
-		&i.CreatedAt,
-	)
+type CreateRiderParams struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type CreateRiderRow struct {
+	ID        int64        `json:"id"`
+	Username  string       `json:"username"`
+	CreatedAt sql.NullTime `json:"created_at"`
+}
+
+func (q *Queries) CreateRider(ctx context.Context, arg CreateRiderParams) (CreateRiderRow, error) {
+	row := q.db.QueryRowContext(ctx, createRider, arg.Username, arg.Password)
+	var i CreateRiderRow
+	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
 	return i, err
 }
 

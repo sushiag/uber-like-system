@@ -9,12 +9,11 @@ import (
 )
 
 type Driver struct {
-	ID        int64          `json:"id"`
-	Username  string         `json:"username"`
-	Password  string         `json:"password"`
-	ApiKey    sql.NullString `json:"api_key"`
-	Status    sql.NullInt16  `json:"status"`
-	CreatedAt sql.NullTime   `json:"created_at"`
+	ID        int64         `json:"id"`
+	Username  string        `json:"username"`
+	Password  string        `json:"password"`
+	Status    sql.NullInt16 `json:"status"`
+	CreatedAt sql.NullTime  `json:"created_at"`
 }
 
 type DriverLocationPath struct {
@@ -38,9 +37,8 @@ type Ride struct {
 }
 
 type Rider struct {
-	ID        int64          `json:"id"`
-	Username  string         `json:"username"`
-	Password  string         `json:"password"`
-	ApiKey    sql.NullString `json:"api_key"`
-	CreatedAt sql.NullTime   `json:"created_at"`
+	ID        int64        `json:"id"`
+	Username  string       `json:"username"`
+	Password  string       `json:"password"`
+	CreatedAt sql.NullTime `json:"created_at"`
 }

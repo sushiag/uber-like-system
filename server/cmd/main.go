@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"uber-like-system/server/api"
+	"server/api"
 	"uber-like-system/server/redis"
 	"uber-like-system/server/ws"
 

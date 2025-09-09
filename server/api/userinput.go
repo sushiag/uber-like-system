@@ -34,7 +34,7 @@ func UsernameField(username string) error {
 	case username == "":
 		log.Printf("username field: must not be blank")
 		return errors.New("username must not be black")
-	case len(username) < 8 || len(username) > 16:
+	case len(username) < 8 || len(username) < 16:
 		log.Printf("username field: must be in between 8-16 characters only")
 		return errors.New("username must not be more than 16 or less than 8")
 	case !usernameRgx.MatchString(username):

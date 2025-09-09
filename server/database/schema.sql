@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS riders (
     id BIGSERIAL PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    api_key TEXT NULL UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
@@ -12,7 +11,6 @@ CREATE TABLE IF NOT EXISTS drivers (
     id BIGSERIAL PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    api_key TEXT NULL UNIQUE,
     status SMALLINT DEFAULT 0, -- 0= available, 1=assigned, 2=enroute, 3=completed
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
