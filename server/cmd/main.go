@@ -1,49 +1,41 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
-	"server/api"
-	"uber-like-system/server/redis"
-	"uber-like-system/server/ws"
 
-	"github.com/go-chi/chi/v5" // Chi v5 router
-	_ "github.com/lib/pq"      // Postgres driver
+	"server/api"
+	database "server/postgres"
+	"server/redis"
+	ws "server/ws"
+
+	"github.com/go-chi/chi/v5"
+	_ "github.com/lib/pq"
 )
 
 func main() {
-	// Load environment variables
-	dbURL := os.Getenv("DB_URL")
+
+	queries, dbConn := database.NewDatabase("../database/schema.sql")
+	defer dbConn.Close()
+
 	redisAddr := os.Getenv("REDIS_ADDR")
 
-	// Connect to PostgreSQL
-	db, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
-
-	// Connect to Redis
 	redisCli := redis.New(redisAddr, "")
 
-	// Setup WebSocket Hub
-	hub := ws.NewHub()
+	wsm := ws.NewWebSocketManager()
 
-	// Initialize API Server
 	srvr := &api.Server{
-		DB:    db,       // Your database connection
-		Redis: redisCli, // Redis client
-		WSHub: hub,      // WebSocket hub
+		DB:    queries,
+		Redis: redisCli,
+		Wsm:   wsm,
 	}
 
-	// Setup Chi Router
-	route := chi.NewRouter()
-	srvr.RegisterRoute(route)
+	router := chi.NewRouter()
+	srvr.RegisterRoute(router)
 
 	log.Println("Server listening on http://localhost:8080")
-	if err := http.ListenAndServe(":8080", route); err != nil {
+	if err := http.ListenAndServe(":8080", router); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

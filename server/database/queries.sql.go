@@ -13,7 +13,7 @@ import (
 const createDriver = `-- name: CreateDriver :one
 INSERT INTO drivers(username, password) 
 VALUES ($1, $2)
-RETURNING id, username, created_at
+RETURNING id, username, password
 `
 
 type CreateDriverParams struct {
@@ -22,15 +22,15 @@ type CreateDriverParams struct {
 }
 
 type CreateDriverRow struct {
-	ID        int64        `json:"id"`
-	Username  string       `json:"username"`
-	CreatedAt sql.NullTime `json:"created_at"`
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func (q *Queries) CreateDriver(ctx context.Context, arg CreateDriverParams) (CreateDriverRow, error) {
 	row := q.db.QueryRowContext(ctx, createDriver, arg.Username, arg.Password)
 	var i CreateDriverRow
-	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
+	err := row.Scan(&i.ID, &i.Username, &i.Password)
 	return i, err
 }
 
@@ -76,7 +76,7 @@ func (q *Queries) CreateRide(ctx context.Context, arg CreateRideParams) (Ride, e
 const createRider = `-- name: CreateRider :one
 INSERT INTO riders(username, password) 
 VALUES ($1, $2)
-RETURNING id, username, created_at
+RETURNING id, username, password
 `
 
 type CreateRiderParams struct {
@@ -85,15 +85,34 @@ type CreateRiderParams struct {
 }
 
 type CreateRiderRow struct {
-	ID        int64        `json:"id"`
-	Username  string       `json:"username"`
-	CreatedAt sql.NullTime `json:"created_at"`
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func (q *Queries) CreateRider(ctx context.Context, arg CreateRiderParams) (CreateRiderRow, error) {
 	row := q.db.QueryRowContext(ctx, createRider, arg.Username, arg.Password)
 	var i CreateRiderRow
-	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
+	err := row.Scan(&i.ID, &i.Username, &i.Password)
+	return i, err
+}
+
+const getDriverByUsername = `-- name: GetDriverByUsername :one
+SELECT id, username, password FROM drivers
+WHERE username = $1
+LIMIT 1
+`
+
+type GetDriverByUsernameRow struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (q *Queries) GetDriverByUsername(ctx context.Context, username string) (GetDriverByUsernameRow, error) {
+	row := q.db.QueryRowContext(ctx, getDriverByUsername, username)
+	var i GetDriverByUsernameRow
+	err := row.Scan(&i.ID, &i.Username, &i.Password)
 	return i, err
 }
 
@@ -106,4 +125,23 @@ func (q *Queries) GetRideStatus(ctx context.Context, id int64) (sql.NullInt16, e
 	var status sql.NullInt16
 	err := row.Scan(&status)
 	return status, err
+}
+
+const getRiderByUsername = `-- name: GetRiderByUsername :one
+SELECT id, username, password FROM riders
+WHERE username = $1
+LIMIT 1
+`
+
+type GetRiderByUsernameRow struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (q *Queries) GetRiderByUsername(ctx context.Context, username string) (GetRiderByUsernameRow, error) {
+	row := q.db.QueryRowContext(ctx, getRiderByUsername, username)
+	var i GetRiderByUsernameRow
+	err := row.Scan(&i.ID, &i.Username, &i.Password)
+	return i, err
 }
