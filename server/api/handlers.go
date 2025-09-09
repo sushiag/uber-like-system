@@ -118,7 +118,7 @@ func (s *Server) createDriver(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to insert rider to database", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("[Rider Registration] Successfully registered rider %s", body.Username)
+	log.Printf("[Driver Registration] Successfully registered rider %s", body.Username)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "you've been registered successfully!",
