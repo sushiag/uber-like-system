@@ -10,6 +10,22 @@ import (
 	"database/sql"
 )
 
+const assignDriverToRide = `-- name: AssignDriverToRide :exec
+UPDATE rides
+SET driver_id = $2, status = 'accepted', accepted_at = now()
+WHERE id = $1 AND status = 'requested'
+`
+
+type AssignDriverToRideParams struct {
+	ID       int64         `json:"id"`
+	DriverID sql.NullInt64 `json:"driver_id"`
+}
+
+func (q *Queries) AssignDriverToRide(ctx context.Context, arg AssignDriverToRideParams) error {
+	_, err := q.db.ExecContext(ctx, assignDriverToRide, arg.ID, arg.DriverID)
+	return err
+}
+
 const createDriver = `-- name: CreateDriver :one
 INSERT INTO drivers(username, password) 
 VALUES ($1, $2)
@@ -35,9 +51,9 @@ func (q *Queries) CreateDriver(ctx context.Context, arg CreateDriverParams) (Cre
 }
 
 const createRide = `-- name: CreateRide :one
-INSERT INTO rides(rider_id, driver_id, pickup_lat, pickup_long, dropoff_lat, dropoff_long)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, rider_id, driver_id, status, pickup_lat, pickup_long, dropoff_lat, dropoff_long, created_at
+INSERT INTO rides(rider_id, driver_id, pickup_lat, pickup_long, dropoff_lat, dropoff_long, status, requested_at)
+VALUES ($1, $2, $3, $4, $5, $6, 'requested', now())
+RETURNING id, rider_id, driver_id, pickup_lat, pickup_long, dropoff_lat, dropoff_long, status, requested_at
 `
 
 type CreateRideParams struct {
@@ -49,7 +65,19 @@ type CreateRideParams struct {
 	DropoffLong float64       `json:"dropoff_long"`
 }
 
-func (q *Queries) CreateRide(ctx context.Context, arg CreateRideParams) (Ride, error) {
+type CreateRideRow struct {
+	ID          int64         `json:"id"`
+	RiderID     int64         `json:"rider_id"`
+	DriverID    sql.NullInt64 `json:"driver_id"`
+	PickupLat   float64       `json:"pickup_lat"`
+	PickupLong  float64       `json:"pickup_long"`
+	DropoffLat  float64       `json:"dropoff_lat"`
+	DropoffLong float64       `json:"dropoff_long"`
+	Status      sql.NullInt16 `json:"status"`
+	RequestedAt sql.NullTime  `json:"requested_at"`
+}
+
+func (q *Queries) CreateRide(ctx context.Context, arg CreateRideParams) (CreateRideRow, error) {
 	row := q.db.QueryRowContext(ctx, createRide,
 		arg.RiderID,
 		arg.DriverID,
@@ -58,17 +86,17 @@ func (q *Queries) CreateRide(ctx context.Context, arg CreateRideParams) (Ride, e
 		arg.DropoffLat,
 		arg.DropoffLong,
 	)
-	var i Ride
+	var i CreateRideRow
 	err := row.Scan(
 		&i.ID,
 		&i.RiderID,
 		&i.DriverID,
-		&i.Status,
 		&i.PickupLat,
 		&i.PickupLong,
 		&i.DropoffLat,
 		&i.DropoffLong,
-		&i.CreatedAt,
+		&i.Status,
+		&i.RequestedAt,
 	)
 	return i, err
 }
@@ -97,6 +125,25 @@ func (q *Queries) CreateRider(ctx context.Context, arg CreateRiderParams) (Creat
 	return i, err
 }
 
+const getAnalytics = `-- name: GetAnalytics :one
+SELECT 
+    AVG(EXTRACT(EPOCH FROM (accepted_at - requested_at))/60) AS avg_wait,
+    COUNT(*) FILTER (WHERE status='completed') AS completed_count
+FROM rides
+`
+
+type GetAnalyticsRow struct {
+	AvgWait        float64 `json:"avg_wait"`
+	CompletedCount int64   `json:"completed_count"`
+}
+
+func (q *Queries) GetAnalytics(ctx context.Context) (GetAnalyticsRow, error) {
+	row := q.db.QueryRowContext(ctx, getAnalytics)
+	var i GetAnalyticsRow
+	err := row.Scan(&i.AvgWait, &i.CompletedCount)
+	return i, err
+}
+
 const getDriverByUsername = `-- name: GetDriverByUsername :one
 SELECT id, username, password FROM drivers
 WHERE username = $1
@@ -116,8 +163,100 @@ func (q *Queries) GetDriverByUsername(ctx context.Context, username string) (Get
 	return i, err
 }
 
+const getNearbyDrivers = `-- name: GetNearbyDrivers :many
+SELECT d.id AS driver_id, d.username, dlp.lat, dlp.long
+FROM driver_location_path AS dlp
+JOIN drivers d ON d.id = dlp.driver_id
+WHERE d.status = 0  -- available
+AND earth_distance(
+    ll_to_earth($1, $2), 
+    ll_to_earth(dlp.lat, dlp.long)
+) < $3
+`
+
+type GetNearbyDriversParams struct {
+	LlToEarth   interface{}     `json:"ll_to_earth"`
+	LlToEarth_2 interface{}     `json:"ll_to_earth_2"`
+	Lat         sql.NullFloat64 `json:"lat"`
+}
+
+type GetNearbyDriversRow struct {
+	DriverID int64           `json:"driver_id"`
+	Username string          `json:"username"`
+	Lat      sql.NullFloat64 `json:"lat"`
+	Long     sql.NullFloat64 `json:"long"`
+}
+
+func (q *Queries) GetNearbyDrivers(ctx context.Context, arg GetNearbyDriversParams) ([]GetNearbyDriversRow, error) {
+	rows, err := q.db.QueryContext(ctx, getNearbyDrivers, arg.LlToEarth, arg.LlToEarth_2, arg.Lat)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetNearbyDriversRow
+	for rows.Next() {
+		var i GetNearbyDriversRow
+		if err := rows.Scan(
+			&i.DriverID,
+			&i.Username,
+			&i.Lat,
+			&i.Long,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRideByID = `-- name: GetRideByID :one
+SELECT id, rider_id, driver_id, pickup_lat, pickup_long, dropoff_lat, dropoff_long, status, requested_at, accepted_at, completed_at
+FROM rides
+WHERE id = $1
+`
+
+type GetRideByIDRow struct {
+	ID          int64         `json:"id"`
+	RiderID     int64         `json:"rider_id"`
+	DriverID    sql.NullInt64 `json:"driver_id"`
+	PickupLat   float64       `json:"pickup_lat"`
+	PickupLong  float64       `json:"pickup_long"`
+	DropoffLat  float64       `json:"dropoff_lat"`
+	DropoffLong float64       `json:"dropoff_long"`
+	Status      sql.NullInt16 `json:"status"`
+	RequestedAt sql.NullTime  `json:"requested_at"`
+	AcceptedAt  sql.NullTime  `json:"accepted_at"`
+	CompletedAt sql.NullTime  `json:"completed_at"`
+}
+
+func (q *Queries) GetRideByID(ctx context.Context, id int64) (GetRideByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getRideByID, id)
+	var i GetRideByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.RiderID,
+		&i.DriverID,
+		&i.PickupLat,
+		&i.PickupLong,
+		&i.DropoffLat,
+		&i.DropoffLong,
+		&i.Status,
+		&i.RequestedAt,
+		&i.AcceptedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
 const getRideStatus = `-- name: GetRideStatus :one
-SELECT status FROM rides WHERE id = $1
+SELECT status FROM rides
+WHERE id = $1
 `
 
 func (q *Queries) GetRideStatus(ctx context.Context, id int64) (sql.NullInt16, error) {
@@ -144,4 +283,21 @@ func (q *Queries) GetRiderByUsername(ctx context.Context, username string) (GetR
 	var i GetRiderByUsernameRow
 	err := row.Scan(&i.ID, &i.Username, &i.Password)
 	return i, err
+}
+
+const updateDriverLocation = `-- name: UpdateDriverLocation :exec
+UPDATE drivers
+SET lat = $2, long = $3, available = true
+WHERE id = $1
+`
+
+type UpdateDriverLocationParams struct {
+	ID   int64           `json:"id"`
+	Lat  sql.NullFloat64 `json:"lat"`
+	Long sql.NullFloat64 `json:"long"`
+}
+
+func (q *Queries) UpdateDriverLocation(ctx context.Context, arg UpdateDriverLocationParams) error {
+	_, err := q.db.ExecContext(ctx, updateDriverLocation, arg.ID, arg.Lat, arg.Long)
+	return err
 }

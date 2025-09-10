@@ -5,28 +5,9 @@ import (
 	"log"
 	"net/http"
 	db "server/database"
-	redis "server/redis"
-	ws "server/ws"
 
-	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 )
-
-type Server struct {
-	DB    *db.Queries
-	Redis *redis.Client
-	Wsm   *ws.WebSocketManager
-}
-
-func (s *Server) RegisterRoute(r chi.Router) {
-	r.Post("/riders/register", s.createRider)
-	r.Post("/drivers/register", s.createDriver)
-	r.Post("/loginRider", s.LoginRider)
-	r.Post("/loginDriver", s.LoginDriver)
-	// r.Post("/rides/request", s.createDriverRequest)
-	r.Post("/drivers/{id}/location", s.updateDriverLocation)
-	//	r.Get("/rides/{id}/status", s.getRideStatus)
-}
 
 func (s *Server) createRider(w http.ResponseWriter, r *http.Request) {
 	type req struct {
@@ -193,42 +174,3 @@ func (s *Server) LoginDriver(w http.ResponseWriter, r *http.Request) {
 		"password": user.Password,
 	})
 }
-
-func (s *Server) updateDriverLocation(w http.ResponseWriter, r *http.Request) {
-	type req struct {
-		DriverID  int64   `json:"driver_id"`
-		Latitude  float64 `json:"lat"`
-		Longitude float64 `json:"long"`
-	}
-
-	var body req
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
-		return
-	}
-
-	//	err := s.Redis.HSet(r.Context(),
-	//		fmt.Sprintf("%d", body.DriverID),
-	//		"lat", body.Latitude,
-	//		"long", body.Longitude,
-	//	).Err()
-	//	if err != nil {
-	//		http.Error(w, "failed to update location", http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	w.WriteHeader(http.StatusOK)
-}
-
-//func (s *Server) getRideStatus(w http.ResponseWriter, r *http.Request) {
-//	rideID := chi.URLParam(r, "id")
-//
-//	var status string
-//	err := s.DB.QueryRow("SELECT status FROM ride_requests WHERE id=$1", rideID).Scan(&status)
-//	if err != nil {
-//		http.Error(w, "ride not found", http.StatusNotFound)
-//		return
-//	}
-//
-//	json.NewEncoder(w).Encode(map[string]string{"status": status})
-//}
