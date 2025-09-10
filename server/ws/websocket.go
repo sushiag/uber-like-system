@@ -7,7 +7,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// connection represents a single WebSocket client
 type Connection struct {
 	ID     uint64
 	Conn   *websocket.Conn
@@ -15,21 +14,18 @@ type Connection struct {
 	Closed chan struct{}
 }
 
-// WebSocketManager manages all client connections and messages
+// all client connections and messages
 type WebSocketManager struct {
-	// All active connections
 	Connections map[uint64]*Connection
+	register    chan *Connection
+	unregister  chan *Connection
+	broadcast   chan []byte
 
-	// Channels for controlling clients
-	register   chan *Connection
-	unregister chan *Connection
-	broadcast  chan []byte
-
-	// Auto-increment for assigning IDs
+	// auto-increment for assigning IDs
 	nextID uint64
 }
 
-// Create a new WebSocket manager
+// creates a new WebSocket manager
 func NewWebSocketManager() *WebSocketManager {
 	manager := &WebSocketManager{
 		Connections: make(map[uint64]*Connection),
@@ -43,7 +39,7 @@ func NewWebSocketManager() *WebSocketManager {
 	return manager
 }
 
-// Start the event loop for handling connections
+// starts the event loop for handling connections
 func (m *WebSocketManager) run() {
 	for {
 		select {
@@ -55,7 +51,7 @@ func (m *WebSocketManager) run() {
 			if _, ok := m.Connections[conn.ID]; ok {
 				close(conn.Send)
 				delete(m.Connections, conn.ID)
-				log.Printf("❌ Client %d disconnected", conn.ID)
+				log.Printf("Client %d disconnected", conn.ID)
 			}
 
 		case msg := <-m.broadcast:
@@ -71,23 +67,22 @@ func (m *WebSocketManager) run() {
 	}
 }
 
-// Upgrader for WebSocket requests
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for now; secure this in production
+		return true
 	},
 }
 
-// WebSocketHandler handles new client connections
+// new client connections
 func (m *WebSocketManager) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
-	// Upgrade HTTP → WebSocket
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("WebSocket upgrade failed:", err)
 		return
 	}
 
-	// Create a new client connection
+	// client connection
 	client := &Connection{
 		ID:     m.nextID,
 		Conn:   conn,
@@ -96,15 +91,12 @@ func (m *WebSocketManager) WebSocketHandler(w http.ResponseWriter, r *http.Reque
 	}
 	m.nextID++
 
-	// Register the client
 	m.register <- client
 
-	// Start read/write loops
 	go m.readPump(client)
 	go m.writePump(client)
 }
 
-// Handles incoming messages from a client
 func (m *WebSocketManager) readPump(c *Connection) {
 	defer func() {
 		m.unregister <- c
@@ -118,12 +110,11 @@ func (m *WebSocketManager) readPump(c *Connection) {
 			break
 		}
 
-		// Broadcast the message to all clients
 		m.broadcast <- msg
 	}
 }
 
-// Sends outgoing messages to the client
+// utgoing messages to the client
 func (m *WebSocketManager) writePump(c *Connection) {
 	defer c.Conn.Close()
 
