@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS rides (
     dropoff_lat DOUBLE PRECISION NOT NULL,
     dropoff_long DOUBLE PRECISION NOT NULL,
     requested_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    accepted_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    completed_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    accepted_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE
 );
 
 -- driver_location_path

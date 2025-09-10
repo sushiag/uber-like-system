@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	db "server/database"
 	"strconv"
@@ -25,22 +26,64 @@ func (s *Server) RequestRideHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rideID, err := s.DB.CreateRide(r.Context(), db.CreateRideParams{
+	params := db.GetNearbyDriversParams{
+		LlToEarth:   fmt.Sprintf("ll_to_earth(%f,%f)", req.PickupLat, req.PickupLong),
+		LlToEarth_2: fmt.Sprintf("ll_to_earth(%f,%f)", req.PickupLat, req.PickupLong),
+		Lat:         sql.NullFloat64{Float64: req.PickupLat, Valid: true},
+	}
+
+	drivers, err := s.DB.GetNearbyDrivers(r.Context(), params)
+	if err != nil {
+		log.Println("failed to find nearby drivers:", err)
+		http.Error(w, "failed to find drivers", http.StatusInternalServerError)
+		return
+	}
+	if len(drivers) == 0 {
+		http.Error(w, "no drivers available nearby", http.StatusNotFound)
+		return
+	}
+
+	driver := drivers[0]
+
+	ride, err := s.DB.CreateRide(r.Context(), db.CreateRideParams{
 		RiderID:     req.RiderID,
+		DriverID:    sql.NullInt64{Valid: false},
 		PickupLat:   req.PickupLat,
 		PickupLong:  req.PickupLong,
 		DropoffLat:  req.DropoffLat,
 		DropoffLong: req.DropoffLong,
 	})
+
 	if err != nil {
+		log.Println("failed to create ride:", err)
 		http.Error(w, "failed to create ride", http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"ride_id": rideID,
-		"status":  "requested",
+	err = s.DB.AssignDriverToRide(r.Context(), db.AssignDriverToRideParams{
+		ID:       ride.ID,
+		DriverID: sql.NullInt64{Int64: driver.DriverID, Valid: true},
 	})
+	if err != nil {
+		log.Println("failed to assign driver:", err)
+		http.Error(w, "failed to assign driver", http.StatusInternalServerError)
+		return
+	}
+
+	s.Wsm.SendToUser(uint64(driver.DriverID), []byte(fmt.Sprintf(
+		`{"event":"ride_assigned","ride_id":%d,"driver_id":%d}`,
+		ride.ID, driver.DriverID,
+	)))
+
+	resp := map[string]interface{}{
+		"ride_id": ride.ID,
+		"status":  "driver_assigned",
+		"driver": map[string]interface{}{
+			"driver_id": driver.DriverID,
+			"username":  driver.Username,
+		},
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) GetNearbyDriversHandler(w http.ResponseWriter, r *http.Request) {
@@ -69,6 +112,25 @@ func (s *Server) GetNearbyDriversHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	out := make([]map[string]interface{}, 0, len(drivers))
+	for _, d := range drivers {
+		var latF, longF *float64
+		if d.Lat.Valid {
+			v := d.Lat.Float64
+			latF = &v
+		}
+		if d.Long.Valid {
+			v := d.Long.Float64
+			longF = &v
+		}
+		out = append(out, map[string]interface{}{
+			"driver_id": d.DriverID,
+			"username":  d.Username,
+			"lat":       latF,
+			"long":      longF,
+		})
+	}
+
 	json.NewEncoder(w).Encode(drivers)
 }
 
@@ -91,6 +153,38 @@ func (s *Server) GetRideStatusHandler(w http.ResponseWriter, r *http.Request) {
 		"status":    ride.Status,
 		"driver_id": ride.DriverID,
 	})
+}
+
+func (s *Server) AcceptRideHandler(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		DriverID int64 `json:"driver_id"`
+		RideID   int64 `json:"ride_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid input", http.StatusBadRequest)
+		return
+	}
+
+	params := db.AssignDriverToRideParams{
+		ID:       req.RideID,
+		DriverID: sql.NullInt64{Int64: req.DriverID, Valid: true},
+	}
+
+	err := s.DB.AssignDriverToRide(r.Context(), params)
+	if err != nil {
+		log.Println("failed to assign driver:", err)
+		http.Error(w, "failed to assign driver", http.StatusInternalServerError)
+		return
+	}
+
+	s.Wsm.SendToUser(uint64(req.DriverID), []byte(fmt.Sprintf(
+		`{"event":"ride_accepted","ride_id":%d,"driver_id":%d}`,
+		req.RideID, req.DriverID,
+	)))
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "ride accepted"})
 }
 
 func (s *Server) updateDriverLocation(w http.ResponseWriter, r *http.Request) {

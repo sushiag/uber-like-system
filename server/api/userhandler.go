@@ -119,10 +119,12 @@ func (s *Server) LoginRider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If username/password is provided → normal login
+	log.Printf("%s is trying to login", body.Username)
+
 	user, err := s.DB.GetRiderByUsername(r.Context(), body.Username)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusUnauthorized)
+		log.Printf("User %s does not match any account", body.Username)
 		return
 	}
 
@@ -130,6 +132,7 @@ func (s *Server) LoginRider(w http.ResponseWriter, r *http.Request) {
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
 	if err != nil {
 		http.Error(w, "Invalid password", http.StatusUnauthorized)
+		log.Printf("Password does not match %s", body.Username)
 		return
 	}
 
@@ -139,6 +142,7 @@ func (s *Server) LoginRider(w http.ResponseWriter, r *http.Request) {
 		"username": user.Username,
 		"password": user.Password,
 	})
+	log.Printf("Hi %s welcome!", body.Username)
 }
 
 func (s *Server) LoginDriver(w http.ResponseWriter, r *http.Request) {
@@ -157,6 +161,7 @@ func (s *Server) LoginDriver(w http.ResponseWriter, r *http.Request) {
 	user, err := s.DB.GetDriverByUsername(r.Context(), body.Username)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusUnauthorized)
+		log.Printf("User %s does not match any account", body.Username)
 		return
 	}
 
@@ -164,13 +169,15 @@ func (s *Server) LoginDriver(w http.ResponseWriter, r *http.Request) {
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
 	if err != nil {
 		http.Error(w, "Invalid password", http.StatusUnauthorized)
+		log.Printf("Password does not match %s", body.Username)
 		return
 	}
 
-	// Login successful
+	// if success
 	json.NewEncoder(w).Encode(map[string]string{
 		"message":  "You've Login successful!",
 		"username": user.Username,
 		"password": user.Password,
 	})
+	log.Printf("Hi %s welcome!", body.Username)
 }

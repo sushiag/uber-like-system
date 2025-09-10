@@ -25,7 +25,7 @@ LIMIT 1;
 
 -- name: CreateRide :one
 INSERT INTO rides(rider_id, driver_id, pickup_lat, pickup_long, dropoff_lat, dropoff_long, status, requested_at)
-VALUES ($1, $2, $3, $4, $5, $6, 'requested', now())
+VALUES ($1, $2, $3, $4, $5, $6, 0, now()) -- 0=requested
 RETURNING id, rider_id, driver_id, pickup_lat, pickup_long, dropoff_lat, dropoff_long, status, requested_at;
 
 -- name: GetRideStatus :one
@@ -39,8 +39,8 @@ WHERE id = $1;
 
 -- name: AssignDriverToRide :exec
 UPDATE rides
-SET driver_id = $2, status = 'accepted', accepted_at = now()
-WHERE id = $1 AND status = 'requested';
+SET driver_id = $2, status = 2, accepted_at = now()
+WHERE id = $1 AND status = 0;
 
 -- name: GetNearbyDrivers :many
 SELECT d.id AS driver_id, d.username, dlp.lat, dlp.long

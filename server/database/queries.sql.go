@@ -12,8 +12,8 @@ import (
 
 const assignDriverToRide = `-- name: AssignDriverToRide :exec
 UPDATE rides
-SET driver_id = $2, status = 'accepted', accepted_at = now()
-WHERE id = $1 AND status = 'requested'
+SET driver_id = $2, status = 2, accepted_at = now()
+WHERE id = $1 AND status = 0
 `
 
 type AssignDriverToRideParams struct {
@@ -52,7 +52,7 @@ func (q *Queries) CreateDriver(ctx context.Context, arg CreateDriverParams) (Cre
 
 const createRide = `-- name: CreateRide :one
 INSERT INTO rides(rider_id, driver_id, pickup_lat, pickup_long, dropoff_lat, dropoff_long, status, requested_at)
-VALUES ($1, $2, $3, $4, $5, $6, 'requested', now())
+VALUES ($1, $2, $3, $4, $5, $6, 0, now()) -- 0=requested
 RETURNING id, rider_id, driver_id, pickup_lat, pickup_long, dropoff_lat, dropoff_long, status, requested_at
 `
 

@@ -1,14 +1,16 @@
 package ws
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/websocket"
 )
 
 type Connection struct {
-	ID     uint64
+	UserID uint64
 	Conn   *websocket.Conn
 	Send   chan []byte
 	Closed chan struct{}
@@ -20,9 +22,6 @@ type WebSocketManager struct {
 	register    chan *Connection
 	unregister  chan *Connection
 	broadcast   chan []byte
-
-	// auto-increment for assigning IDs
-	nextID uint64
 }
 
 // creates a new WebSocket manager
@@ -32,7 +31,6 @@ func NewWebSocketManager() *WebSocketManager {
 		register:    make(chan *Connection),
 		unregister:  make(chan *Connection),
 		broadcast:   make(chan []byte),
-		nextID:      1,
 	}
 
 	go manager.run()
@@ -44,14 +42,14 @@ func (m *WebSocketManager) run() {
 	for {
 		select {
 		case conn := <-m.register:
-			m.Connections[conn.ID] = conn
-			log.Printf("Client %d connected", conn.ID)
+			m.Connections[conn.UserID] = conn
+			log.Printf("User %d connected", conn.UserID)
 
 		case conn := <-m.unregister:
-			if _, ok := m.Connections[conn.ID]; ok {
+			if _, ok := m.Connections[conn.UserID]; ok {
 				close(conn.Send)
-				delete(m.Connections, conn.ID)
-				log.Printf("Client %d disconnected", conn.ID)
+				delete(m.Connections, conn.UserID)
+				log.Printf("Client %d disconnected", conn.UserID)
 			}
 
 		case msg := <-m.broadcast:
@@ -60,7 +58,7 @@ func (m *WebSocketManager) run() {
 				case conn.Send <- msg:
 				default:
 					close(conn.Send)
-					delete(m.Connections, conn.ID)
+					delete(m.Connections, conn.UserID)
 				}
 			}
 		}
@@ -76,6 +74,18 @@ var upgrader = websocket.Upgrader{
 // new client connections
 func (m *WebSocketManager) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		http.Error(w, "userID is required to connect", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "user is invalid", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("WebSocket upgrade failed:", err)
@@ -84,17 +94,22 @@ func (m *WebSocketManager) WebSocketHandler(w http.ResponseWriter, r *http.Reque
 
 	// client connection
 	client := &Connection{
-		ID:     m.nextID,
+		UserID: uint64(userID),
 		Conn:   conn,
 		Send:   make(chan []byte, 256),
 		Closed: make(chan struct{}),
 	}
-	m.nextID++
 
 	m.register <- client
 
 	go m.readPump(client)
 	go m.writePump(client)
+}
+
+type RideEvent struct {
+	Event  string `json:"event"`
+	RideID int64  `json:"ride_id"`
+	FromID uint64 `json:"from_id"`
 }
 
 func (m *WebSocketManager) readPump(c *Connection) {
@@ -106,11 +121,16 @@ func (m *WebSocketManager) readPump(c *Connection) {
 	for {
 		_, msg, err := c.Conn.ReadMessage()
 		if err != nil {
-			log.Printf("Read error from client %d: %v", c.ID, err)
 			break
 		}
 
-		m.broadcast <- msg
+		var event RideEvent
+		if err := json.Unmarshal(msg, &event); err == nil {
+			// Example: notify rider that driver accepted
+			if event.Event == "ride_accepted" {
+				m.SendToUser(event.FromID, msg)
+			}
+		}
 	}
 }
 
