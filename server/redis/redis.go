@@ -11,7 +11,7 @@ type Client struct {
 	C *redis.Client
 }
 
-// New initializes a Redis client
+// new client from using redis package
 func New(addr, pass string) *Client {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     addr,
@@ -22,7 +22,7 @@ func New(addr, pass string) *Client {
 	return &Client{C: rdb}
 }
 
-// SetDriverLocation stores driver's current location in Redis
+// stores the current driver location in Redis
 func (r *Client) SetDriverLocation(ctx context.Context, driverID uint64, lat, long float64) error {
 	key := fmt.Sprintf("driver:%d", driverID)
 	return r.C.HSet(ctx, key, map[string]any{
@@ -31,7 +31,7 @@ func (r *Client) SetDriverLocation(ctx context.Context, driverID uint64, lat, lo
 	}).Err()
 }
 
-// GetDriverLocation retrieves driver's location from Redis
+// retrieves location from Redis
 func (r *Client) GetDriverLocation(ctx context.Context, driverID uint64) (float64, float64, error) {
 	key := fmt.Sprintf("driver:%d", driverID)
 	data, err := r.C.HGetAll(ctx, key).Result()
