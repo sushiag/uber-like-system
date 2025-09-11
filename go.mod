@@ -1,10 +1,10 @@
-module server
+module uber-like-system
 
 go 1.24.0
 
 toolchain go1.24.7
 
-replace server => ../server
+replace uber-like-sytem => ../uber-like-system
 
 require (
 	github.com/go-chi/chi/v5 v5.2.3

@@ -3,7 +3,7 @@ INSERT INTO drivers(username, password)
 VALUES ($1, $2)
 RETURNING id, username, password;
 
--- name: GetDriverByUsername :one
+-- name: GetDriverByID :one
 SELECT id, username, password FROM drivers
 WHERE username = $1
 LIMIT 1;
@@ -18,7 +18,7 @@ INSERT INTO riders(username, password)
 VALUES ($1, $2)
 RETURNING id, username, password;
 
--- name: GetRiderByUsername :one
+-- name: GetRiderByID :one
 SELECT id, username, password FROM riders
 WHERE username = $1
 LIMIT 1;

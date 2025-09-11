@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	db "server/database"
+	db "uber-like-system/server/database"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -121,7 +121,7 @@ func (s *Server) LoginRider(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%s is trying to login", body.Username)
 
-	user, err := s.DB.GetRiderByUsername(r.Context(), body.Username)
+	user, err := s.DB.GetRiderByID(r.Context(), body.Username)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusUnauthorized)
 		log.Printf("User %s does not match any account", body.Username)
@@ -157,8 +157,8 @@ func (s *Server) LoginDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If username/password is provided → normal login
-	user, err := s.DB.GetDriverByUsername(r.Context(), body.Username)
+	// login via username
+	user, err := s.DB.GetDriverByID(r.Context(), body.Username)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusUnauthorized)
 		log.Printf("User %s does not match any account", body.Username)

@@ -1,9 +1,9 @@
 package api
 
 import (
-	db "server/database"
-	redis "server/redis"
-	ws "server/ws"
+	db "uber-like-system/server/database"
+	redis "uber-like-system/server/redis"
+	ws "uber-like-system/server/ws"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -16,17 +16,22 @@ type Server struct {
 
 func (s *Server) RegisterRoute(r chi.Router) {
 	// creaste users
-	r.Post("/riders/register", s.createRider)
-	r.Post("/drivers/register", s.createDriver)
+	r.Post("/riders/signup", s.createRider)
+	r.Post("/drivers/signup", s.createDriver)
 
 	// login users
-	r.Post("/riders/loginRider", s.LoginRider)
-	r.Post("/drivers/loginDriver", s.LoginDriver)
+	r.Post("/riders/login", s.LoginRider)
+	r.Post("/drivers/login", s.LoginDriver)
 
 	// rides handling
 	r.Post("/rides/request", s.RequestRideHandler)
+	r.Post("/riders/{1}/accept", s.AcceptRideHandler)
+
 	r.Post("/drivers/{id}/location", s.updateDriverLocation)
 	r.Get("/rides/{id}/status", s.GetRideStatusHandler)
+
+	// admin testing
+	r.Get("/drivers/nearby", s.GetNearbyDriversHandler)
 	r.Get("/analytics", s.AnalyticsHandler)
 
 }

@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"os"
 
-	"server/api"
-	database "server/postgres"
-	"server/redis"
-	ws "server/ws"
+	"uber-like-system/server/api"
+	database "uber-like-system/server/postgres"
+	"uber-like-system/server/redis"
+	ws "uber-like-system/server/ws"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
@@ -16,7 +16,7 @@ import (
 
 func main() {
 
-	queries, dbConn := database.NewDatabase("../database/schema.sql")
+	queries, dbConn := database.NewDatabase("database/schema.sql")
 	defer dbConn.Close()
 
 	redisAddr := os.Getenv("REDIS_ADDR")

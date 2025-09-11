@@ -144,21 +144,21 @@ func (q *Queries) GetAnalytics(ctx context.Context) (GetAnalyticsRow, error) {
 	return i, err
 }
 
-const getDriverByUsername = `-- name: GetDriverByUsername :one
+const getDriverByID = `-- name: GetDriverByID :one
 SELECT id, username, password FROM drivers
 WHERE username = $1
 LIMIT 1
 `
 
-type GetDriverByUsernameRow struct {
+type GetDriverByIDRow struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-func (q *Queries) GetDriverByUsername(ctx context.Context, username string) (GetDriverByUsernameRow, error) {
-	row := q.db.QueryRowContext(ctx, getDriverByUsername, username)
-	var i GetDriverByUsernameRow
+func (q *Queries) GetDriverByID(ctx context.Context, username string) (GetDriverByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getDriverByID, username)
+	var i GetDriverByIDRow
 	err := row.Scan(&i.ID, &i.Username, &i.Password)
 	return i, err
 }
@@ -266,21 +266,21 @@ func (q *Queries) GetRideStatus(ctx context.Context, id int64) (sql.NullInt16, e
 	return status, err
 }
 
-const getRiderByUsername = `-- name: GetRiderByUsername :one
+const getRiderByID = `-- name: GetRiderByID :one
 SELECT id, username, password FROM riders
 WHERE username = $1
 LIMIT 1
 `
 
-type GetRiderByUsernameRow struct {
+type GetRiderByIDRow struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-func (q *Queries) GetRiderByUsername(ctx context.Context, username string) (GetRiderByUsernameRow, error) {
-	row := q.db.QueryRowContext(ctx, getRiderByUsername, username)
-	var i GetRiderByUsernameRow
+func (q *Queries) GetRiderByID(ctx context.Context, username string) (GetRiderByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getRiderByID, username)
+	var i GetRiderByIDRow
 	err := row.Scan(&i.ID, &i.Username, &i.Password)
 	return i, err
 }

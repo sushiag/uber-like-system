@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	db "server/database"
+	db "uber-like-system/server/database"
 
 	"github.com/joho/godotenv"
 
