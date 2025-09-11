@@ -126,15 +126,15 @@ func (m *WebSocketManager) readPump(c *Connection) {
 
 		var event RideEvent
 		if err := json.Unmarshal(msg, &event); err == nil {
-			// Example: notify rider that driver accepted
 			if event.Event == "ride_accepted" {
 				m.SendToUser(event.FromID, msg)
+				log.Printf("%d", msg)
 			}
 		}
 	}
 }
 
-// utgoing messages to the client
+// outgoing messages to the client
 func (m *WebSocketManager) writePump(c *Connection) {
 	defer c.Conn.Close()
 

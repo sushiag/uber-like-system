@@ -33,5 +33,4 @@ func (s *Server) RegisterRoute(r chi.Router) {
 	// admin testing
 	r.Get("/drivers/nearby", s.GetNearbyDriversHandler)
 	r.Get("/analytics", s.AnalyticsHandler)
-
 }

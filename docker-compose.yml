@@ -33,7 +33,7 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: trish
+      DB_USER: uber
       DB_PASSWORD: 09112001
       DB_NAME: uber_db
       REDIS_ADDR: redis:6379
