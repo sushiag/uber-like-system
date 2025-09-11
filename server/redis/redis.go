@@ -57,7 +57,6 @@ func (r *Client) GetNearbyDrivers(ctx context.Context, lat, long float64, radius
 		return nil, err
 	}
 
-	// results is already []string, so no need to access .Name
 	driverIDs := make([]string, len(results))
 	copy(driverIDs, results)
 	return driverIDs, nil
